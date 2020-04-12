@@ -15,7 +15,7 @@ reactive nor coroutines library. Extensions for [Reaktive](https://github.com/ba
 and for [Coroutines](https://github.com/Kotlin/kotlinx.coroutines) libraries are 
 provided as separate modules.  
 
-![MVI](docs/media/mvi.jpg)
+![MVIKotlin](docs/media/mvikotlin.jpg)
 
 ## Setup
 Recommended minimum Gradle version is 5.3. Please read first the documentation about
