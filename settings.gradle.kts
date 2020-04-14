@@ -8,6 +8,8 @@ include(":mvikotlin-test-internal")
 include(":mvikotlin-main")
 include(":mvikotlin-logging")
 include(":mvikotlin-timetravel")
+include(":mvikotlin-timetravel-server")
+include(":mvikotlin-timetravel-proto")
 include(":mvikotlin-extensions-reaktive")
 include(":mvikotlin-extensions-coroutines")
 include(":androidx-lifecycle-interop")
@@ -15,6 +17,8 @@ include(":sample:todo-common")
 include(":sample:todo-common-internal")
 include(":sample:todo-reaktive")
 include(":sample:todo-coroutines")
+
+include(":tools:idea-timetravel-plugin")
 
 //include(":tools:check-publication")
 

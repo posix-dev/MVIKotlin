@@ -30,6 +30,7 @@ internal class TimeTravelStoreImpl<in Intent : Any, in Action : Any, in Result :
         assertOnMainThread()
     }
 
+    private var eventId = 0L
     private val executor = executorFactory()
     private val internalState = AtomicReference(initialState)
     private val stateSubject = BehaviorSubject(initialState)
@@ -116,7 +117,7 @@ internal class TimeTravelStoreImpl<in Intent : Any, in Action : Any, in Result :
         assertOnMainThread()
 
         doIfNotDisposed {
-            eventSubject.onNext(TimeTravelEvent(name, type, value, state))
+            eventSubject.onNext(TimeTravelEvent(eventId++, name, type, value, state))
         }
     }
 

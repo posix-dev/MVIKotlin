@@ -1,0 +1,23 @@
+<idea-plugin>
+    <id>org.arkivanov.mvikotlin.plugin.idea.timetravel</id>
+    <name>MVIKotlin Time Travel</name>
+    <vendor url="https://github.com/arkivanov/MVIKotlin">MVIKotlin</vendor>
+
+    <description><![CDATA[
+    Enter short description for your plugin here.<br>
+    <em>most HTML tags may be used</em>
+    ]]></description>
+
+    <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="MVIKotlin Time Travel" secondary="true" anchor="right"
+                    factoryClass="com.arkivanov.mvikotlin.plugin.idea.timetravel.TimeTravelToolWindowFactory"/>
+    </extensions>
+
+    <actions>
+        <!-- Add your actions here -->
+    </actions>
+</idea-plugin>

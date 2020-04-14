@@ -13,6 +13,7 @@ import com.arkivanov.mvikotlin.core.utils.JvmSerializable
  * @param state `State` of the [Store] at the moment of the event
  */
 data class TimeTravelEvent(
+    val id: Long,
     val storeName: String,
     val type: StoreEventType,
     val value: Any,
