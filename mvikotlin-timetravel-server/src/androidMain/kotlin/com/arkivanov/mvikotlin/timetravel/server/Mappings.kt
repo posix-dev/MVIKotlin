@@ -6,22 +6,23 @@ import com.arkivanov.mvikotlin.timetravel.TimeTravelState
 import com.arkivanov.mvikotlin.timetravel.proto.parseObject
 import com.arkivanov.mvikotlin.timetravel.proto.StoreEventType as StoreEventTypeProto
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEvent as TimeTravelEventProto
-import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelState as TimeTravelStateProto
+import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelStateUpdate as TimeTravelStateUpdateProto
 
-internal fun TimeTravelState.toProto(): TimeTravelStateProto =
-    TimeTravelStateProto(
-        events = events.map { it.toProto() },
-        selectedEventIndex = selectedEventIndex,
-        mode = mode.toProto()
-    )
+//internal fun TimeTravelState.toProto(): TimeTravelStateProto =
+//    TimeTravelStateProto(
+//        events = events.map { it.toProto() },
+//        selectedEventIndex = selectedEventIndex,
+//        mode = mode.toProto()
+//    )
+
+internal fun List<TimeTravelEvent>.toProto(): List<TimeTravelEventProto> = map { it.toProto() }
 
 private fun TimeTravelEvent.toProto(): TimeTravelEventProto =
     TimeTravelEventProto(
         id = id,
         storeName = storeName,
         type = type.toProto(),
-        value = parseObject(value),
-        state = parseObject(state)
+        value = parseObject(value)
     )
 
 private fun StoreEventType.toProto(): StoreEventTypeProto =
@@ -33,9 +34,9 @@ private fun StoreEventType.toProto(): StoreEventTypeProto =
         StoreEventType.LABEL -> StoreEventTypeProto.LABEL
     }
 
-private fun TimeTravelState.Mode.toProto(): TimeTravelStateProto.Mode =
+internal fun TimeTravelState.Mode.toProto(): TimeTravelStateUpdateProto.Mode =
     when (this) {
-        TimeTravelState.Mode.IDLE -> TimeTravelStateProto.Mode.IDLE
-        TimeTravelState.Mode.RECORDING -> TimeTravelStateProto.Mode.RECORDING
-        TimeTravelState.Mode.STOPPED -> TimeTravelStateProto.Mode.STOPPED
+        TimeTravelState.Mode.IDLE -> TimeTravelStateUpdateProto.Mode.IDLE
+        TimeTravelState.Mode.RECORDING -> TimeTravelStateUpdateProto.Mode.RECORDING
+        TimeTravelState.Mode.STOPPED -> TimeTravelStateUpdateProto.Mode.STOPPED
     }

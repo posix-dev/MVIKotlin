@@ -9,7 +9,7 @@ import com.intellij.ui.content.ContentFactory
 class TimeTravelToolWindowFactory : ToolWindowFactory {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val myToolWindow = TimeTravelToolWindow(toolWindow)
+        val myToolWindow = TimeTravelToolWindow()
         val contentFactory = ContentFactory.SERVICE.getInstance()
         val content: Content = contentFactory.createContent(myToolWindow.getContent(), "", false)
         toolWindow.contentManager.addContent(content)

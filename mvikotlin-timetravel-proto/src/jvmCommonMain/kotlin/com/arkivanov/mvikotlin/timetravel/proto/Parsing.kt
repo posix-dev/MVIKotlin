@@ -53,21 +53,21 @@ private fun valueObject(clazz: Class<*>): Value.Object =
         clazz == DoubleArray::class.java -> Value.Object.DoubleArray(null)
         clazz == CharArray::class.java -> Value.Object.CharArray(null)
         clazz == BooleanArray::class.java -> Value.Object.BooleanArray(null)
-        clazz == Array<Any?>::class.java -> Value.Object.Array(null)
+        clazz == Array<Any?>::class.java -> Value.Object.Array(getFullTypeName(clazz = Array<Any?>::class.java), null)
         Iterable::class.java.isAssignableFrom(clazz) -> Value.Object.Iterable(getFullTypeName(clazz = clazz), null)
         Map::class.java.isAssignableFrom(clazz) -> Value.Object.Map(getFullTypeName(clazz = clazz), null)
-        else -> Value.Object.Other(type = getFullTypeName(clazz = clazz), value = null)
+        else -> Value.Object.Other(getFullTypeName(clazz = clazz), null)
     }
 
 private fun iterable(iterable: Iterable<*>, visitedObjects: MutableSet<Any>): Value.Object.Iterable =
     Value.Object.Iterable(
-        type = getFullTypeName(iterable, Iterable::class.java),
+        type = getFullTypeName(iterable),
         value = iterable.map { valueObject(value = it, visitedObjects = visitedObjects) }
     )
 
 private fun map(map: Map<*, *>, visitedObjects: MutableSet<Any>): Value.Object.Map =
     Value.Object.Map(
-        type = getFullTypeName(map, Map::class.java),
+        type = getFullTypeName(map),
         value = run {
             val newMap = mutableMapOf<Value.Object, Value.Object>()
             map.forEach { (k, v) ->
@@ -79,7 +79,10 @@ private fun map(map: Map<*, *>, visitedObjects: MutableSet<Any>): Value.Object.M
     )
 
 private fun array(array: Array<*>, visitedObjects: MutableSet<Any>): Value.Object.Array =
-    Value.Object.Array(value = array.map { valueObject(value = it, visitedObjects = visitedObjects) })
+    Value.Object.Array(
+        type = getFullTypeName(value = array),
+        value = array.map { valueObject(value = it, visitedObjects = visitedObjects) }
+    )
 
 private fun other(obj: Any, visitedObjects: MutableSet<Any>): Value.Object.Other =
     when (obj) {

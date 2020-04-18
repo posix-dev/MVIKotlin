@@ -1,5 +1,7 @@
 package com.arkivanov.mvikotlin.plugin.idea.timetravel
 
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
 import java.io.BufferedReader
 import java.io.IOException
 import javax.swing.SwingUtilities
@@ -14,3 +16,10 @@ fun Process.readError(): String? = errorStream?.bufferedReader()?.use(BufferedRe
 fun runOnUiThread(block: () -> Unit) {
     SwingUtilities.invokeLater(block)
 }
+
+inline fun anAction(crossinline listener: (AnActionEvent) -> Unit): AnAction =
+    object : AnAction() {
+        override fun actionPerformed(event: AnActionEvent) {
+            listener(event)
+        }
+    }

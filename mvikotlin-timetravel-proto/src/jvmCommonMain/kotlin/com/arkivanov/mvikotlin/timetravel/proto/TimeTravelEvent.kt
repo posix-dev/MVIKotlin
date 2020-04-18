@@ -6,6 +6,5 @@ data class TimeTravelEvent(
     val id: Long,
     val storeName: String,
     val type: StoreEventType,
-    val value: Value,
-    val state: Value
+    val value: Value
 ) : Serializable

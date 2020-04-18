@@ -13,7 +13,7 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow id="MVIKotlin Time Travel" secondary="true" anchor="right"
+        <toolWindow id="MVIKotlin Time Travel" anchor="right"
                     factoryClass="com.arkivanov.mvikotlin.plugin.idea.timetravel.TimeTravelToolWindowFactory"/>
     </extensions>
 

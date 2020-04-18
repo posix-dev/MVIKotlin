@@ -26,7 +26,7 @@ sealed class Value : Serializable {
         data class DoubleArray(val value: kotlin.DoubleArray?) : Object()
         data class CharArray(val value: kotlin.CharArray?) : Object()
         data class BooleanArray(val value: kotlin.BooleanArray?) : Object()
-        data class Array(val value: List<Object>?) : Object()
+        data class Array(val type: kotlin.String, val value: List<Object>?) : Object()
         data class Iterable(val type: kotlin.String, val value: List<Object>?) : Object()
         data class Map(val type: kotlin.String, val value: kotlin.collections.Map<Object, Object>?) : Object()
         data class Other(val type: kotlin.String, val value: kotlin.collections.Map<kotlin.String, Value>?) : Object()

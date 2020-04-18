@@ -6,6 +6,7 @@ import com.arkivanov.mvikotlin.timetravel.TimeTravelState
 import com.arkivanov.mvikotlin.timetravel.controller.TimeTravelController
 import com.arkivanov.mvikotlin.timetravel.controller.timeTravelController
 import com.arkivanov.mvikotlin.timetravel.proto.DEFAULT_PORT
+import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEventsUpdate
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelStateUpdate
 import java.io.IOException
 import java.io.ObjectOutputStream
@@ -131,12 +132,17 @@ class TimeTravelServer(
                         break
                     }
 
+
                 val update =
-                    if (previousState == null) {
-                        TimeTravelStateUpdate.Full(state.toProto())
-                    } else {
-                        TimeTravelStateUpdate.Update(diffState(new = state, previous = previousState).toProto())
-                    }
+                    TimeTravelStateUpdate(
+                        eventsUpdate = if (previousState == null) {
+                            TimeTravelEventsUpdate.All(state.events.toProto())
+                        } else {
+                            TimeTravelEventsUpdate.New(diffEvents(new = state.events, previous = previousState.events).toProto())
+                        },
+                        selectedEventIndex = state.selectedEventIndex,
+                        mode = state.mode.toProto()
+                    )
 
                 previousState = state
 
@@ -146,13 +152,7 @@ class TimeTravelServer(
             }
         }
 
-        private fun diffState(new: TimeTravelState, previous: TimeTravelState): TimeTravelState {
-            val events = ArrayList<TimeTravelEvent>()
-            for (i in previous.events.size until new.events.size) {
-                events += new.events[i]
-            }
-
-            return new.copy(events = events)
-        }
+        private fun diffEvents(new: List<TimeTravelEvent>, previous: List<TimeTravelEvent>): List<TimeTravelEvent> =
+            if (new.size > previous.size) new.subList(previous.size, new.size) else emptyList()
     }
 }
