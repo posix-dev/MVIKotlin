@@ -7,45 +7,106 @@ import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEventsUpdate
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelStateUpdate
 import com.arkivanov.mvikotlin.timetravel.proto.Value
 import com.arkivanov.mvikotlin.timetravel.proto.parseObject
-import com.arkivanov.mvikotlin.timetravel.proto.type
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.DefaultActionGroup
-import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
+import org.jdesktop.swingx.renderer.DefaultListRenderer
 import java.awt.BorderLayout
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.io.BufferedReader
 import java.io.ObjectInputStream
 import java.net.Socket
 import javax.swing.DefaultListModel
+import javax.swing.JComponent
 import javax.swing.JPanel
 
-class TimeTravelToolWindow {
 
-    private val listModel = DefaultListModel<String>()
+class TimeTravelToolWindow(
+    private val eventDetailsScreen: EventDetailsScreen
+) {
+
+    private val actionManager = ActionManager.getInstance()
+    private val listModel = DefaultListModel<TimeTravelEvent>()
+
+    private val debugAction = debugAction()
+
+    private val list =
+        JBList(listModel).apply {
+            cellRenderer = DefaultListRenderer { (it as TimeTravelEvent).description }
+
+            addMouseListener(
+                object : MouseAdapter() {
+                    override fun mouseClicked(event: MouseEvent) {
+                        onListItemClick(event)
+                    }
+                }
+            )
+
+            addListSelectionListener { onSelectionChanged() }
+        }
 
     val content =
         JPanel(BorderLayout()).apply {
-            val actionManager = ActionManager.getInstance()
-            val toolBar = actionManager.createActionToolbar(ActionPlaces.COMMANDER_TOOLBAR, createToolbarActions(actionManager), true)
-            add(toolBar.component, BorderLayout.NORTH)
-
-            add(JBScrollPane(JBList(listModel)), BorderLayout.CENTER)
+            add(toolbar(), BorderLayout.NORTH)
+            add(JBScrollPane(list), BorderLayout.CENTER)
         }
 
-    private fun createToolbarActions(actionManager: ActionManager): DefaultActionGroup {
-        val connectAction = anAction { connect() }
-        connectAction.copyFrom(actionManager.getAction(IdeActions.ACTION_DEFAULT_RUNNER));
-        connectAction.templatePresentation.text = "Connect";
-
-        return DefaultActionGroup(connectAction)
+    private fun onListItemClick(ev: MouseEvent) {
+        if (ev.clickCount == 2) {
+            if (list.getCellBounds(0, list.lastVisibleIndex)?.contains(ev.point) == true) {
+                list.selectedValue?.also(::showEventDetails)
+            }
+        }
     }
+
+    private fun onSelectionChanged() {
+//        debugAction.templatePresentation.isEnabled = list.selectedValue?.type?.isDebuggable == true
+    }
+
+    private fun showEventDetails(event: TimeTravelEvent) {
+        eventDetailsScreen.show(event) {
+
+        }
+    }
+
+    private fun toolbar(): JComponent =
+        actionManager
+            .createActionToolbar(ActionPlaces.COMMANDER_TOOLBAR, toolbarActions(), true)
+            .component
+
+    private fun toolbarActions(): DefaultActionGroup =
+        DefaultActionGroup().apply {
+            add(connectAction())
+            addSeparator()
+            add(debugAction())
+        }
+
+    private fun connectAction(): AnAction =
+        anAction(text = "Connect", icon = AllIcons.Actions.RunAll) { connect() } .apply {
+            templatePresentation.isEnabled = false
+            templatePresentation.setEnabled(false)
+        }
+
+    private fun debugAction(): AnAction =
+        anAction(text = "Debug", icon = AllIcons.Actions.StartDebugger) { debug() }
+            .apply {
+                templatePresentation.isEnabled = false
+                templatePresentation.setEnabled(false)
+            }
 
     private fun connect() {
         if (isDeviceReady() && forwardPort()) {
             ReaderThread(::onStateUpdate).start()
         }
+    }
+
+    private fun debug() {
+
     }
 
     data class State(val text: String)
@@ -85,10 +146,8 @@ class TimeTravelToolWindow {
     }
 
     private fun addEvents(events: Iterable<TimeTravelEvent>) {
-        events.forEach { listModel.addElement(it.description) }
+        events.forEach(listModel::addElement)
     }
-
-    private val TimeTravelEvent.description: String get() = "[$storeName]: ${type.altName}.${value.type}"
 
     private fun isDeviceReady(): Boolean {
         try {
@@ -126,14 +185,7 @@ class TimeTravelToolWindow {
                 if (deviceId == null) {
                     listOf(ADB_PATH, "forward", "tcp:$DEFAULT_PORT", "tcp:$DEFAULT_PORT")
                 } else {
-                    listOf(
-                        ADB_PATH,
-                        "-s",
-                        deviceId,
-                        "forward",
-                        "tcp:$DEFAULT_PORT",
-                        "tcp:$DEFAULT_PORT"
-                    )
+                    listOf(ADB_PATH, "-s", deviceId, "forward", "tcp:$DEFAULT_PORT", "tcp:$DEFAULT_PORT")
                 }
 
             val process = exec(params)
