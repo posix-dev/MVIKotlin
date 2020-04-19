@@ -11,7 +11,7 @@ class TimeTravelToolWindowFactory : ToolWindowFactory {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val myToolWindow = TimeTravelToolWindow()
         val contentFactory = ContentFactory.SERVICE.getInstance()
-        val content: Content = contentFactory.createContent(myToolWindow.getContent(), "", false)
+        val content: Content = contentFactory.createContent(myToolWindow.content, "", false)
         toolWindow.contentManager.addContent(content)
     }
 }

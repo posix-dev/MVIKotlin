@@ -6,6 +6,8 @@ import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEvent
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEventsUpdate
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelStateUpdate
 import com.arkivanov.mvikotlin.timetravel.proto.Value
+import com.arkivanov.mvikotlin.timetravel.proto.parseObject
+import com.arkivanov.mvikotlin.timetravel.proto.type
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.DefaultActionGroup
@@ -17,51 +19,52 @@ import java.io.BufferedReader
 import java.io.ObjectInputStream
 import java.net.Socket
 import javax.swing.DefaultListModel
-import javax.swing.JComponent
 import javax.swing.JPanel
 
 class TimeTravelToolWindow {
 
     private val listModel = DefaultListModel<String>()
 
-    private val content =
+    val content =
         JPanel(BorderLayout()).apply {
             val actionManager = ActionManager.getInstance()
             val toolBar = actionManager.createActionToolbar(ActionPlaces.COMMANDER_TOOLBAR, createToolbarActions(actionManager), true)
             add(toolBar.component, BorderLayout.NORTH)
 
-            val list = JBList(listModel)
-//            list.cellRenderer = ItemRenderer()
-            add(JBScrollPane(list), BorderLayout.CENTER)
+            add(JBScrollPane(JBList(listModel)), BorderLayout.CENTER)
         }
 
     private fun createToolbarActions(actionManager: ActionManager): DefaultActionGroup {
-        val connectAction =
-            anAction {
-
-            }
-
+        val connectAction = anAction { connect() }
         connectAction.copyFrom(actionManager.getAction(IdeActions.ACTION_DEFAULT_RUNNER));
         connectAction.templatePresentation.text = "Connect";
 
         return DefaultActionGroup(connectAction)
     }
 
+    private fun connect() {
+        if (isDeviceReady() && forwardPort()) {
+            ReaderThread(::onStateUpdate).start()
+        }
+    }
+
+    data class State(val text: String)
+
     init {
-        listModel.addElement(
-            TimeTravelEvent(
-                id = 1,
-                storeName = "MyStore",
-                type = StoreEventType.INTENT,
-                value = Value.Object.String("Some value")
-            )
-        )
-        listModel.addElement(
-            TimeTravelEvent(
-                id = 2,
-                storeName = "MyStore",
-                type = StoreEventType.INTENT,
-                value = Value.Object.String("Some value")
+        addEvents(
+            listOf(
+                TimeTravelEvent(
+                    id = 1,
+                    storeName = "MyStore",
+                    type = StoreEventType.INTENT,
+                    value = Value.Object.String("Some value")
+                ),
+                TimeTravelEvent(
+                    id = 2,
+                    storeName = "MyStore",
+                    type = StoreEventType.STATE,
+                    value = parseObject(State(text = "Some text"))
+                )
             )
         )
     }
@@ -82,10 +85,10 @@ class TimeTravelToolWindow {
     }
 
     private fun addEvents(events: Iterable<TimeTravelEvent>) {
-        events.forEach(listModel::addElement)
+        events.forEach { listModel.addElement(it.description) }
     }
 
-    fun getContent(): JComponent = content
+    private val TimeTravelEvent.description: String get() = "[$storeName]: ${type.altName}.${value.type}"
 
     private fun isDeviceReady(): Boolean {
         try {
