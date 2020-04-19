@@ -5,6 +5,9 @@ import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEvent
 import com.arkivanov.mvikotlin.timetravel.proto.type
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
+import java.awt.event.MouseListener
 import java.io.BufferedReader
 import java.io.IOException
 import javax.swing.Icon
@@ -21,10 +24,26 @@ fun runOnUiThread(block: () -> Unit) {
     SwingUtilities.invokeLater(block)
 }
 
-inline fun anAction(text: String? = null, icon: Icon? = null, crossinline listener: (AnActionEvent) -> Unit): AnAction =
+inline fun mouseListener(crossinline onClick: (MouseEvent) -> Unit): MouseListener =
+    object : MouseAdapter() {
+        override fun mouseClicked(ev: MouseEvent) {
+            onClick(ev)
+        }
+    }
+
+inline fun anAction(
+    text: String? = null,
+    icon: Icon? = null,
+    crossinline onUpdate: (AnActionEvent) -> Unit = {},
+    crossinline onAction: (AnActionEvent) -> Unit
+): AnAction =
     object : AnAction() {
+        override fun update(ev: AnActionEvent) {
+            onUpdate(ev)
+        }
+
         override fun actionPerformed(event: AnActionEvent) {
-            listener(event)
+            onAction(event)
         }
     }.apply {
         templatePresentation.apply {

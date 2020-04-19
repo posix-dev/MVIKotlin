@@ -16,68 +16,45 @@ import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import org.jdesktop.swingx.renderer.DefaultListRenderer
 import java.awt.BorderLayout
-import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.BufferedReader
 import java.io.ObjectInputStream
 import java.net.Socket
 import javax.swing.DefaultListModel
-import javax.swing.JComponent
 import javax.swing.JPanel
-
 
 class TimeTravelToolWindow(
     private val eventDetailsScreen: EventDetailsScreen
 ) {
 
-    private val actionManager = ActionManager.getInstance()
-    private val listModel = DefaultListModel<TimeTravelEvent>()
+    private val toolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.COMMANDER_TOOLBAR, toolbarActions(), true)
 
-    private val debugAction = debugAction()
+    private val listModel = DefaultListModel<TimeTravelEvent>()
 
     private val list =
         JBList(listModel).apply {
             cellRenderer = DefaultListRenderer { (it as TimeTravelEvent).description }
-
-            addMouseListener(
-                object : MouseAdapter() {
-                    override fun mouseClicked(event: MouseEvent) {
-                        onListItemClick(event)
-                    }
-                }
-            )
-
+            addMouseListener(mouseListener(::onListItemClick))
             addListSelectionListener { onSelectionChanged() }
         }
 
     val content =
         JPanel(BorderLayout()).apply {
-            add(toolbar(), BorderLayout.NORTH)
+            add(toolbar.component, BorderLayout.NORTH)
             add(JBScrollPane(list), BorderLayout.CENTER)
         }
 
     private fun onListItemClick(ev: MouseEvent) {
         if (ev.clickCount == 2) {
             if (list.getCellBounds(0, list.lastVisibleIndex)?.contains(ev.point) == true) {
-                list.selectedValue?.also(::showEventDetails)
+                list.selectedValue?.also(eventDetailsScreen::show)
             }
         }
     }
 
     private fun onSelectionChanged() {
-//        debugAction.templatePresentation.isEnabled = list.selectedValue?.type?.isDebuggable == true
+        toolbar.updateActionsImmediately()
     }
-
-    private fun showEventDetails(event: TimeTravelEvent) {
-        eventDetailsScreen.show(event) {
-
-        }
-    }
-
-    private fun toolbar(): JComponent =
-        actionManager
-            .createActionToolbar(ActionPlaces.COMMANDER_TOOLBAR, toolbarActions(), true)
-            .component
 
     private fun toolbarActions(): DefaultActionGroup =
         DefaultActionGroup().apply {
@@ -87,17 +64,15 @@ class TimeTravelToolWindow(
         }
 
     private fun connectAction(): AnAction =
-        anAction(text = "Connect", icon = AllIcons.Actions.RunAll) { connect() } .apply {
-            templatePresentation.isEnabled = false
-            templatePresentation.setEnabled(false)
-        }
+        anAction(text = "Connect", icon = AllIcons.Actions.RunAll) { connect() }
 
     private fun debugAction(): AnAction =
-        anAction(text = "Debug", icon = AllIcons.Actions.StartDebugger) { debug() }
-            .apply {
-                templatePresentation.isEnabled = false
-                templatePresentation.setEnabled(false)
-            }
+        anAction(
+            text = "Debug",
+            icon = AllIcons.Actions.StartDebugger,
+            onUpdate = { it.presentation.isEnabled = list.selectedValue?.type?.isDebuggable == true },
+            onAction = { debug() }
+        )
 
     private fun connect() {
         if (isDeviceReady() && forwardPort()) {
