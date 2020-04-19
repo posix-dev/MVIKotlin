@@ -7,11 +7,13 @@ import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEventsUpdate
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelStateUpdate
 import com.arkivanov.mvikotlin.timetravel.proto.Value
 import com.arkivanov.mvikotlin.timetravel.proto.parseObject
+import com.arkivanov.mvikotlin.timetravel.proto.type
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.ui.JBSplitter
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import org.jdesktop.swingx.renderer.DefaultListRenderer
@@ -22,6 +24,9 @@ import java.io.ObjectInputStream
 import java.net.Socket
 import javax.swing.DefaultListModel
 import javax.swing.JPanel
+import javax.swing.JTree
+import javax.swing.tree.DefaultMutableTreeNode
+import javax.swing.tree.DefaultTreeModel
 
 class TimeTravelToolWindow(
     private val eventDetailsScreen: EventDetailsScreen
@@ -38,10 +43,21 @@ class TimeTravelToolWindow(
             addListSelectionListener { onSelectionChanged() }
         }
 
+    private val rootTreeNode = DefaultMutableTreeNode("")
+    private val treeModel = DefaultTreeModel(rootTreeNode)
+    private val tree = JTree(treeModel)
+
     val content =
         JPanel(BorderLayout()).apply {
             add(toolbar.component, BorderLayout.NORTH)
-            add(JBScrollPane(list), BorderLayout.CENTER)
+
+            add(
+                JBSplitter(false).apply {
+                    firstComponent = JBScrollPane(list)
+                    secondComponent = JBScrollPane(tree)
+                },
+                BorderLayout.CENTER
+            )
         }
 
     private fun onListItemClick(ev: MouseEvent) {
@@ -54,6 +70,7 @@ class TimeTravelToolWindow(
 
     private fun onSelectionChanged() {
         toolbar.updateActionsImmediately()
+        updateTree()
     }
 
     private fun toolbarActions(): DefaultActionGroup =
@@ -176,6 +193,132 @@ class TimeTravelToolWindow(
         }
 
         return false
+    }
+
+    private fun updateTree() {
+        rootTreeNode.removeAllChildren()
+        val selectedEvent: TimeTravelEvent? = list.selectedValue
+
+
+        selectedEvent?.value?.also {
+            rootTreeNode.userObject = it.getNodeText()
+            rootTreeNode.addChildren(it)
+        }
+
+        tree.isVisible = selectedEvent != null
+        treeModel.reload()
+    }
+
+    private fun Value.toNode(prefix: String? = null): DefaultMutableTreeNode {
+        val node = DefaultMutableTreeNode(getNodeText(prefix = prefix))
+        node.addChildren(this)
+
+        return node
+    }
+
+    private fun Value.getNodeText(prefix: String? = null): String {
+        val builder = StringBuilder()
+        if (prefix != null) {
+            builder.append(prefix)
+            builder.append(": ")
+        }
+
+        builder.append(type)
+
+        val valueDescription: String? = valueDescription
+        if (valueDescription != null) {
+            builder.append(" = ")
+            builder.append(valueDescription)
+        }
+
+        return builder.toString()
+    }
+
+    private fun DefaultMutableTreeNode.addChildren(value: Value) {
+        when (value) {
+            is Value.Primitive.Int,
+            is Value.Primitive.Long,
+            is Value.Primitive.Short,
+            is Value.Primitive.Byte,
+            is Value.Primitive.Float,
+            is Value.Primitive.Double,
+            is Value.Primitive.Char,
+            is Value.Primitive.Boolean,
+            is Value.Object.String,
+            is Value.Object.Unparsed -> Unit
+            is Value.Object.IntArray -> addChildren(value)
+            is Value.Object.LongArray -> addChildren(value)
+            is Value.Object.ShortArray -> addChildren(value)
+            is Value.Object.ByteArray -> addChildren(value)
+            is Value.Object.FloatArray -> addChildren(value)
+            is Value.Object.DoubleArray -> addChildren(value)
+            is Value.Object.CharArray -> addChildren(value)
+            is Value.Object.BooleanArray -> addChildren(value)
+            is Value.Object.Array -> addChildren(value)
+            is Value.Object.Iterable -> addChildren(value)
+            is Value.Object.Map -> addChildren(value)
+            is Value.Object.Other -> addChildren(value)
+        }.let {}
+    }
+
+    private fun DefaultMutableTreeNode.addChildren(array: Value.Object.IntArray) {
+        array.value?.forEachIndexed { index, value -> addArrayItem(index, value.toString()) }
+    }
+
+    private fun DefaultMutableTreeNode.addChildren(array: Value.Object.LongArray) {
+        array.value?.forEachIndexed { index, value -> addArrayItem(index, value.toString()) }
+    }
+
+    private fun DefaultMutableTreeNode.addChildren(array: Value.Object.ShortArray) {
+        array.value?.forEachIndexed { index, value -> addArrayItem(index, value.toString()) }
+    }
+
+    private fun DefaultMutableTreeNode.addChildren(array: Value.Object.ByteArray) {
+        array.value?.forEachIndexed { index, value -> addArrayItem(index, value.toString()) }
+    }
+
+    private fun DefaultMutableTreeNode.addChildren(array: Value.Object.FloatArray) {
+        array.value?.forEachIndexed { index, value -> addArrayItem(index, value.toString()) }
+    }
+
+    private fun DefaultMutableTreeNode.addChildren(array: Value.Object.DoubleArray) {
+        array.value?.forEachIndexed { index, value -> addArrayItem(index, value.toString()) }
+    }
+
+    private fun DefaultMutableTreeNode.addChildren(array: Value.Object.CharArray) {
+        array.value?.forEachIndexed { index, value -> addArrayItem(index, value.toString()) }
+    }
+
+    private fun DefaultMutableTreeNode.addChildren(array: Value.Object.BooleanArray) {
+        array.value?.forEachIndexed { index, value -> addArrayItem(index, value.toString()) }
+    }
+
+    private fun DefaultMutableTreeNode.addArrayItem(index: Int, value: String) {
+        add(DefaultMutableTreeNode("[$index]: $value"))
+    }
+
+    private fun DefaultMutableTreeNode.addChildren(array: Value.Object.Array) {
+        array.value?.forEachIndexed { index, value ->
+            add(value.toNode(prefix = "[$index]"))
+        }
+    }
+
+    private fun DefaultMutableTreeNode.addChildren(iterable: Value.Object.Iterable) {
+        iterable.value?.forEachIndexed { index, value ->
+            add(value.toNode(prefix = "[$index]"))
+        }
+    }
+
+    private fun DefaultMutableTreeNode.addChildren(map: Value.Object.Map) {
+        map.value?.forEach { (key, value) ->
+            add(value.toNode(prefix = "[${key.valueDescription}]"))
+        }
+    }
+
+    private fun DefaultMutableTreeNode.addChildren(other: Value.Object.Other) {
+        other.value?.forEach { (key, value) ->
+            add(value.toNode(prefix = key))
+        }
     }
 
     private class ReaderThread(

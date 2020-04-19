@@ -2,6 +2,7 @@ package com.arkivanov.mvikotlin.plugin.idea.timetravel
 
 import com.arkivanov.mvikotlin.timetravel.proto.StoreEventType
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEvent
+import com.arkivanov.mvikotlin.timetravel.proto.Value
 import com.arkivanov.mvikotlin.timetravel.proto.type
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -72,4 +73,59 @@ internal val StoreEventType.isDebuggable: Boolean
             StoreEventType.RESULT,
             StoreEventType.LABEL -> true
             StoreEventType.STATE -> false
+        }
+
+
+internal val Value.size: Int
+    get() =
+        when (this) {
+            is Value.Primitive.Int,
+            is Value.Primitive.Long,
+            is Value.Primitive.Short,
+            is Value.Primitive.Byte,
+            is Value.Primitive.Float,
+            is Value.Primitive.Double,
+            is Value.Primitive.Char,
+            is Value.Primitive.Boolean,
+            is Value.Object.Other,
+            is Value.Object.Unparsed -> -1
+            is Value.Object.String -> value?.length ?: -1
+            is Value.Object.IntArray -> value?.size ?: -1
+            is Value.Object.LongArray -> value?.size ?: -1
+            is Value.Object.ShortArray -> value?.size ?: -1
+            is Value.Object.ByteArray -> value?.size ?: -1
+            is Value.Object.FloatArray -> value?.size ?: -1
+            is Value.Object.DoubleArray -> value?.size ?: -1
+            is Value.Object.CharArray -> value?.size ?: -1
+            is Value.Object.BooleanArray -> value?.size ?: -1
+            is Value.Object.Array -> value?.size ?: -1
+            is Value.Object.Iterable -> value?.size ?: -1
+            is Value.Object.Map -> value?.size ?: -1
+        }
+
+internal val Value.valueDescription: String?
+    get() =
+        when (this) {
+            is Value.Primitive.Int -> value.toString()
+            is Value.Primitive.Long -> value.toString()
+            is Value.Primitive.Short -> value.toString()
+            is Value.Primitive.Byte -> value.toString()
+            is Value.Primitive.Float -> value.toString()
+            is Value.Primitive.Double -> value.toString()
+            is Value.Primitive.Char -> value.toString()
+            is Value.Primitive.Boolean -> value.toString()
+            is Value.Object.String -> value?.let { "\"$it\"" } ?: "null"
+            is Value.Object.IntArray -> if (value == null) "null" else null
+            is Value.Object.LongArray -> if (value == null) "null" else null
+            is Value.Object.ShortArray -> if (value == null) "null" else null
+            is Value.Object.ByteArray -> if (value == null) "null" else null
+            is Value.Object.FloatArray -> if (value == null) "null" else null
+            is Value.Object.DoubleArray -> if (value == null) "null" else null
+            is Value.Object.CharArray -> if (value == null) "null" else null
+            is Value.Object.BooleanArray -> if (value == null) "null" else null
+            is Value.Object.Array -> if (value == null) "null" else null
+            is Value.Object.Iterable -> if (value == null) "null" else null
+            is Value.Object.Map -> if (value == null) "null" else null
+            is Value.Object.Other -> if (value == null) "null" else null
+            is Value.Object.Unparsed -> value
         }
