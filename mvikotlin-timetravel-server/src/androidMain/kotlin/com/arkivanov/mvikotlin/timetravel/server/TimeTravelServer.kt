@@ -1,6 +1,7 @@
 package com.arkivanov.mvikotlin.timetravel.server
 
 import android.os.Handler
+import android.os.Looper
 import com.arkivanov.mvikotlin.rx.observer
 import com.arkivanov.mvikotlin.timetravel.TimeTravelEvent
 import com.arkivanov.mvikotlin.timetravel.TimeTravelState
@@ -136,7 +137,7 @@ class TimeTravelServer(
     ) : SocketThread(socket) {
         override fun run(socket: Socket) {
             val input = ObjectInputStream(socket.getInputStream().buffered())
-            val handler = Handler()
+            val handler = Handler(Looper.getMainLooper())
 
             while (!isInterrupted) {
                 val command = input.readObject() as TimeTravelCommand

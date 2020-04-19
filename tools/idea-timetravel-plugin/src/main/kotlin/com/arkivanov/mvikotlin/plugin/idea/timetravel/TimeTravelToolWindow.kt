@@ -1,7 +1,6 @@
 package com.arkivanov.mvikotlin.plugin.idea.timetravel
 
 import com.arkivanov.mvikotlin.timetravel.proto.DEFAULT_PORT
-import com.arkivanov.mvikotlin.timetravel.proto.StoreEventType
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelCommand
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEvent
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEventsUpdate
@@ -102,7 +101,7 @@ class TimeTravelToolWindow(
     private fun connectAction(): AnAction =
         anAction(
             text = "Connect",
-            icon = AllIcons.Debugger.Db_exception_breakpoint,
+            icon = AllIcons.Nodes.Plugin,
             onUpdate = { it.presentation.isEnabled = !isConnected },
             onAction = { connect() }
         )
@@ -118,7 +117,7 @@ class TimeTravelToolWindow(
     private fun startRecordingAction(): AnAction =
         anAction(
             text = "Start recording",
-            icon = AllIcons.Ide.Macro.Recording_2,
+            icon = AllIcons.Debugger.Db_set_breakpoint,
             onUpdate = { it.presentation.isEnabled = isConnected && (state?.mode?.isRecordingActionEnabled == true) },
             onAction = { writer?.send(TimeTravelCommand.StartRecording) }
         )
@@ -134,7 +133,7 @@ class TimeTravelToolWindow(
     private fun stopRecordingAction(): AnAction =
         anAction(
             text = "Stop recording",
-            icon = AllIcons.Process.Stop,
+            icon = AllIcons.Process.StopSmall,
             onUpdate = { it.presentation.isEnabled = isConnected && (state?.mode?.isStopActionEnabled == true) },
             onAction = { writer?.send(TimeTravelCommand.StopRecording) }
         )
@@ -192,7 +191,7 @@ class TimeTravelToolWindow(
             text = "Cancel",
             icon = AllIcons.Actions.Cancel,
             onUpdate = { it.presentation.isEnabled = isConnected && (state?.mode?.isCancelActionEnabled == true) },
-            onAction = { writer?.send(TimeTravelCommand.MoveToEnd) }
+            onAction = { writer?.send(TimeTravelCommand.Cancel) }
         )
 
     private val TimeTravelStateUpdate.Mode.isCancelActionEnabled: Boolean
@@ -230,19 +229,6 @@ class TimeTravelToolWindow(
     private fun debug() {
         val event = list.selectedValue ?: return
         writer?.send(TimeTravelCommand.DebugEvent(eventId = event.id))
-    }
-
-    init {
-        addEvents(
-            listOf(
-                TimeTravelEvent(
-                    id = 1,
-                    storeName = "MyStore",
-                    type = StoreEventType.INTENT,
-                    value = Value.Object.String("Some value")
-                )
-            )
-        )
     }
 
     private fun onConnectionResult(result: ConnectionResult) {

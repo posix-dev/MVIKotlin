@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
                 savedState = lastCustomNonConfigurationInstance as MutableMap<String, Any>?
             )
 
-        override val frameworkType: FrameworkType = FrameworkType.COROUTINES
+        override val frameworkType: FrameworkType = FrameworkType.REAKTIVE
         override val onItemSelectedListener: (id: String) -> Unit = ::onItemSelected
         override val onDetailsFinishedListener: () -> Unit = ::onDetailsFinished
 
