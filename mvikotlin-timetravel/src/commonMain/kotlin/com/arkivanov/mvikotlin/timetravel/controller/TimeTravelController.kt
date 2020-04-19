@@ -94,5 +94,5 @@ interface TimeTravelController {
      * - If event type is [StoreEventType.LABEL], emits the `Label` from the appropriate [Store]
      */
     @MainThread
-    fun debugEvent(event: TimeTravelEvent)
+    fun debugEvent(eventId: Long)
 }

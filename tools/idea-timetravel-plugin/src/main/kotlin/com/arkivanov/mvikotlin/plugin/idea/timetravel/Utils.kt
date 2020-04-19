@@ -55,6 +55,10 @@ inline fun anAction(
         }
     }
 
+internal fun log(text: String) {
+    println("TimeTravelServer: $text")
+}
+
 private val STORE_EVENT_TYPE_ALT_NAMES =
     StoreEventType.values().associateBy({ it }) {
         @Suppress("DefaultLocale")

@@ -1,16 +1,16 @@
-package com.arkivanov.mvikotlin.timetravel.server
+package com.arkivanov.mvikotlin.timetravel.proto
 
 import java.io.Closeable
-import java.net.ServerSocket
+import java.lang.Object
 
-internal class ServerSocketHolder : Closeable {
+class CloseableHolder : Closeable {
 
     private val monitor = Object()
     private var isClosed = false
-    private var socket: ServerSocket? = null
+    private var socket: Any? = null
 
-    fun set(closeable: ServerSocket): Boolean {
-        var socketToClose: ServerSocket?
+    fun set(closeable: Any): Boolean {
+        var socketToClose: Any?
 
         synchronized(monitor) {
             if (isClosed) {
@@ -27,7 +27,7 @@ internal class ServerSocketHolder : Closeable {
     }
 
     override fun close() {
-        var socketToClose: ServerSocket?
+        var socketToClose: Any?
         synchronized(monitor) {
             socketToClose = socket
             socket = null

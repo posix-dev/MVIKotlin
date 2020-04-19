@@ -130,10 +130,11 @@ internal class TimeTravelControllerImpl : TimeTravelController {
         }
     }
 
-    override fun debugEvent(event: TimeTravelEvent) {
+    override fun debugEvent(eventId: Long) {
         assertOnMainThread()
 
         if (state.mode === Mode.STOPPED) {
+            val event = state.events.firstOrNull { it.id == eventId } ?: return
             stores[event.storeName]?.eventDebugger?.debug(event)
         }
     }

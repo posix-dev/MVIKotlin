@@ -200,7 +200,7 @@ class TimeTravelView @JvmOverloads constructor(
                         .show()
                 }
 
-                debugButton.setOnClickListener { timeTravelController.debugEvent(boundEvent) }
+                debugButton.setOnClickListener { timeTravelController.debugEvent(boundEvent.id) }
             }
 
             @SuppressLint("SetTextI18n")

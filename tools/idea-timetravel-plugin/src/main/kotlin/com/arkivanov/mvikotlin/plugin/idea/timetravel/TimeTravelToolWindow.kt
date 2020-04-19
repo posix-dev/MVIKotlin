@@ -2,11 +2,12 @@ package com.arkivanov.mvikotlin.plugin.idea.timetravel
 
 import com.arkivanov.mvikotlin.timetravel.proto.DEFAULT_PORT
 import com.arkivanov.mvikotlin.timetravel.proto.StoreEventType
+import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelCommand
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEvent
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEventsUpdate
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelStateUpdate
 import com.arkivanov.mvikotlin.timetravel.proto.Value
-import com.arkivanov.mvikotlin.timetravel.proto.parseObject
+import com.arkivanov.mvikotlin.timetravel.proto.closeSafe
 import com.arkivanov.mvikotlin.timetravel.proto.type
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionManager
@@ -20,8 +21,11 @@ import org.jdesktop.swingx.renderer.DefaultListRenderer
 import java.awt.BorderLayout
 import java.awt.event.MouseEvent
 import java.io.BufferedReader
+import java.io.IOException
 import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
 import java.net.Socket
+import java.util.concurrent.LinkedBlockingQueue
 import javax.swing.DefaultListModel
 import javax.swing.JPanel
 import javax.swing.JTree
@@ -60,6 +64,11 @@ class TimeTravelToolWindow(
             )
         }
 
+    private var state: State? = null
+    private var reader: ReaderThread? = null
+    private var writer: WriterThread? = null
+    private val isConnected: Boolean get() = (reader != null) && (writer != null)
+
     private fun onListItemClick(ev: MouseEvent) {
         if (ev.clickCount == 2) {
             if (list.getCellBounds(0, list.lastVisibleIndex)?.contains(ev.point) == true) {
@@ -75,33 +84,153 @@ class TimeTravelToolWindow(
 
     private fun toolbarActions(): DefaultActionGroup =
         DefaultActionGroup().apply {
-            add(connectAction())
+            addAll(connectAction(), disconnectAction())
+            addSeparator()
+            addAll(
+                startRecordingAction(),
+                stopRecordingAction(),
+                moveToStartAction(),
+                stepBackwardAction(),
+                stepForwardAction(),
+                moveToEndAction(),
+                cancelAction()
+            )
             addSeparator()
             add(debugAction())
         }
 
     private fun connectAction(): AnAction =
-        anAction(text = "Connect", icon = AllIcons.Actions.RunAll) { connect() }
+        anAction(
+            text = "Connect",
+            icon = AllIcons.Debugger.Db_exception_breakpoint,
+            onUpdate = { it.presentation.isEnabled = !isConnected },
+            onAction = { connect() }
+        )
+
+    private fun disconnectAction(): AnAction =
+        anAction(
+            text = "Disconnect",
+            icon = AllIcons.Actions.Close,
+            onUpdate = { it.presentation.isEnabled = isConnected },
+            onAction = { disconnect() }
+        )
+
+    private fun startRecordingAction(): AnAction =
+        anAction(
+            text = "Start recording",
+            icon = AllIcons.Ide.Macro.Recording_2,
+            onUpdate = { it.presentation.isEnabled = isConnected && (state?.mode?.isRecordingActionEnabled == true) },
+            onAction = { writer?.send(TimeTravelCommand.StartRecording) }
+        )
+
+    private val TimeTravelStateUpdate.Mode.isRecordingActionEnabled: Boolean
+        get() =
+            when (this) {
+                TimeTravelStateUpdate.Mode.IDLE -> true
+                TimeTravelStateUpdate.Mode.RECORDING,
+                TimeTravelStateUpdate.Mode.STOPPED -> false
+            }
+
+    private fun stopRecordingAction(): AnAction =
+        anAction(
+            text = "Stop recording",
+            icon = AllIcons.Process.Stop,
+            onUpdate = { it.presentation.isEnabled = isConnected && (state?.mode?.isStopActionEnabled == true) },
+            onAction = { writer?.send(TimeTravelCommand.StopRecording) }
+        )
+
+    private val TimeTravelStateUpdate.Mode.isStopActionEnabled: Boolean
+        get() =
+            when (this) {
+                TimeTravelStateUpdate.Mode.IDLE -> false
+                TimeTravelStateUpdate.Mode.RECORDING -> true
+                TimeTravelStateUpdate.Mode.STOPPED -> false
+            }
+
+    private fun moveToStartAction(): AnAction =
+        anAction(
+            text = "Move to start",
+            icon = AllIcons.Actions.Play_first,
+            onUpdate = { it.presentation.isEnabled = isConnected && (state?.mode?.isMovingActionEnabled == true) },
+            onAction = { writer?.send(TimeTravelCommand.MoveToStart) }
+        )
+
+    private fun stepBackwardAction(): AnAction =
+        anAction(
+            text = "Step backward",
+            icon = AllIcons.Actions.Play_back,
+            onUpdate = { it.presentation.isEnabled = isConnected && (state?.mode?.isMovingActionEnabled == true) },
+            onAction = { writer?.send(TimeTravelCommand.StepBackward) }
+        )
+
+    private fun stepForwardAction(): AnAction =
+        anAction(
+            text = "Step forward ",
+            icon = AllIcons.Actions.Play_forward,
+            onUpdate = { it.presentation.isEnabled = isConnected && (state?.mode?.isMovingActionEnabled == true) },
+            onAction = { writer?.send(TimeTravelCommand.StepForward) }
+        )
+
+    private fun moveToEndAction(): AnAction =
+        anAction(
+            text = "Move to end",
+            icon = AllIcons.Actions.Play_last,
+            onUpdate = { it.presentation.isEnabled = isConnected && (state?.mode?.isMovingActionEnabled == true) },
+            onAction = { writer?.send(TimeTravelCommand.MoveToEnd) }
+        )
+
+    private val TimeTravelStateUpdate.Mode.isMovingActionEnabled: Boolean
+        get() =
+            when (this) {
+                TimeTravelStateUpdate.Mode.IDLE,
+                TimeTravelStateUpdate.Mode.RECORDING -> false
+                TimeTravelStateUpdate.Mode.STOPPED -> true
+            }
+
+    private fun cancelAction(): AnAction =
+        anAction(
+            text = "Cancel",
+            icon = AllIcons.Actions.Cancel,
+            onUpdate = { it.presentation.isEnabled = isConnected && (state?.mode?.isCancelActionEnabled == true) },
+            onAction = { writer?.send(TimeTravelCommand.MoveToEnd) }
+        )
+
+    private val TimeTravelStateUpdate.Mode.isCancelActionEnabled: Boolean
+        get() =
+            when (this) {
+                TimeTravelStateUpdate.Mode.IDLE -> false
+                TimeTravelStateUpdate.Mode.RECORDING -> true
+                TimeTravelStateUpdate.Mode.STOPPED -> true
+            }
 
     private fun debugAction(): AnAction =
         anAction(
             text = "Debug",
             icon = AllIcons.Actions.StartDebugger,
-            onUpdate = { it.presentation.isEnabled = list.selectedValue?.type?.isDebuggable == true },
+            onUpdate = { it.presentation.isEnabled = (writer != null) && (list.selectedValue?.type?.isDebuggable == true) },
             onAction = { debug() }
         )
 
     private fun connect() {
         if (isDeviceReady() && forwardPort()) {
-            ReaderThread(::onStateUpdate).start()
+            ConnectionThread(
+                onConnectionResult = ::onConnectionResult,
+                onUpdateRead = ::onStateUpdate
+            ).start()
         }
     }
 
-    private fun debug() {
-
+    private fun disconnect() {
+        reader?.interrupt()
+        reader = null
+        writer?.interrupt()
+        writer = null
     }
 
-    data class State(val text: String)
+    private fun debug() {
+        val event = list.selectedValue ?: return
+        writer?.send(TimeTravelCommand.DebugEvent(eventId = event.id))
+    }
 
     init {
         addEvents(
@@ -111,18 +240,25 @@ class TimeTravelToolWindow(
                     storeName = "MyStore",
                     type = StoreEventType.INTENT,
                     value = Value.Object.String("Some value")
-                ),
-                TimeTravelEvent(
-                    id = 2,
-                    storeName = "MyStore",
-                    type = StoreEventType.STATE,
-                    value = parseObject(State(text = "Some text"))
                 )
             )
         )
     }
 
+    private fun onConnectionResult(result: ConnectionResult) {
+        when (result) {
+            is ConnectionResult.Success -> {
+                reader = result.reader
+                writer = result.writer
+            }
+
+            is ConnectionResult.Error -> {
+            }
+        }.let {}
+    }
+
     private fun onStateUpdate(update: TimeTravelStateUpdate) {
+        state = State(selectedEventIndex = update.selectedEventIndex, mode = update.mode)
         onEventsUpdate(update.eventsUpdate)
     }
 
@@ -321,27 +457,109 @@ class TimeTravelToolWindow(
         }
     }
 
-    private class ReaderThread(
+    private class ConnectionThread(
+        private val onConnectionResult: (ConnectionResult) -> Unit,
         private val onUpdateRead: (TimeTravelStateUpdate) -> Unit
     ) : Thread() {
         override fun run() {
-            super.run()
+            val socket: Socket
+            try {
+                socket = Socket("localhost", DEFAULT_PORT)
+            } catch (e: IOException) {
+                runOnUiThread { onConnectionResult(ConnectionResult.Error(e)) }
+                return
+            }
 
+            if (isInterrupted) {
+                socket.closeSafe()
+                return
+            }
+
+            val reader = ReaderThread(socket, onUpdateRead)
+            reader.start()
+            val writer = WriterThread(socket)
+            writer.start()
+
+            runOnUiThread { onConnectionResult(ConnectionResult.Success(reader, writer)) }
+        }
+    }
+
+    private sealed class ConnectionResult {
+        class Success(val reader: ReaderThread, val writer: WriterThread) : ConnectionResult()
+        class Error(val error: IOException) : ConnectionResult()
+    }
+
+    private abstract class SocketThread(
+        private val socket: Socket
+    ) : Thread() {
+        override fun run() {
+            try {
+                run(socket)
+            } catch (e: IOException) {
+                e.printStackTrace()
+            } finally {
+                socket.closeSafe()
+            }
+        }
+
+        @Throws(IOException::class)
+        protected abstract fun run(socket: Socket)
+
+        override fun interrupt() {
+            socket.closeSafe()
+
+            super.interrupt()
+        }
+    }
+
+    private class ReaderThread(
+        socket: Socket,
+        private val onUpdateRead: (TimeTravelStateUpdate) -> Unit
+    ) : SocketThread(socket) {
+        override fun run(socket: Socket) {
             println("Reader thread started")
-            Socket("localhost", DEFAULT_PORT).use { socket ->
-                println("Reader socket created")
-                val input = ObjectInputStream(socket.getInputStream().buffered())
-                while (!isInterrupted) {
-                    println("Reading...")
-                    val update = input.readObject() as TimeTravelStateUpdate
-                    println("Update read: $update")
-                    runOnUiThread {
-                        onUpdateRead(update)
-                    }
+            val input = ObjectInputStream(socket.getInputStream().buffered())
+            while (!isInterrupted) {
+                println("Reading...")
+                val update = input.readObject() as TimeTravelStateUpdate
+                println("Update read: $update")
+                runOnUiThread {
+                    onUpdateRead(update)
                 }
             }
         }
     }
+
+    private class WriterThread(socket: Socket) : SocketThread(socket) {
+        private val queue = LinkedBlockingQueue<TimeTravelCommand>()
+
+        override fun run(socket: Socket) {
+            println("Writer thread started")
+            val output = ObjectOutputStream(socket.getOutputStream().buffered())
+            while (!isInterrupted) {
+                val command =
+                    try {
+                        queue.take()
+                    } catch (e: InterruptedException) {
+                        interrupt()
+                        break
+                    }
+
+                log("Writing command: $command")
+                output.writeObject(command)
+                output.flush()
+            }
+        }
+
+        fun send(command: TimeTravelCommand) {
+            queue.offer(command)
+        }
+    }
+
+    private data class State(
+        val selectedEventIndex: Int,
+        val mode: TimeTravelStateUpdate.Mode
+    )
 
     private companion object {
         private const val ADB_PATH = "/home/aivanov/dev/android-sdk/platform-tools/adb"

@@ -1,14 +1,19 @@
 package com.arkivanov.mvikotlin.timetravel.server
 
+import android.os.Handler
 import com.arkivanov.mvikotlin.rx.observer
 import com.arkivanov.mvikotlin.timetravel.TimeTravelEvent
 import com.arkivanov.mvikotlin.timetravel.TimeTravelState
 import com.arkivanov.mvikotlin.timetravel.controller.TimeTravelController
 import com.arkivanov.mvikotlin.timetravel.controller.timeTravelController
+import com.arkivanov.mvikotlin.timetravel.proto.CloseableHolder
 import com.arkivanov.mvikotlin.timetravel.proto.DEFAULT_PORT
+import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelCommand
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEventsUpdate
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelStateUpdate
+import com.arkivanov.mvikotlin.timetravel.proto.closeSafe
 import java.io.IOException
+import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.net.ServerSocket
 import java.net.Socket
@@ -16,28 +21,29 @@ import java.util.Collections
 import java.util.WeakHashMap
 
 class TimeTravelServer(
-    private val controller: TimeTravelController = timeTravelController,
-    private val port: Int = DEFAULT_PORT
+    controller: TimeTravelController = timeTravelController,
+    port: Int = DEFAULT_PORT
 ) {
 
     private val stateHolder = StateHolder(controller.state)
-    private val connectionThread = ConnectionThread(port = port, stateHolder = stateHolder)
+    private val connectionThread = ConnectionThread(port = port, stateHolder = stateHolder, timeTravelController = timeTravelController)
     private val disposable = controller.states(observer(onNext = stateHolder::offer))
 
-    init {
+    fun start() {
         connectionThread.start()
     }
 
-    fun destroy() {
+    fun stop() {
         disposable.dispose()
         connectionThread.interrupt()
     }
 
     private class ConnectionThread(
         private val port: Int,
-        private val stateHolder: StateHolder
+        private val stateHolder: StateHolder,
+        private val timeTravelController: TimeTravelController
     ) : Thread() {
-        private val socketHolder = ServerSocketHolder()
+        private val socketHolder = CloseableHolder()
 
         override fun run() {
             while (true) {
@@ -79,6 +85,9 @@ class TimeTravelServer(
                         val socket = serverSocket.accept()
                         log("Socket accepted")
 
+                        val reader = ReaderThread(socket, timeTravelController)
+                        threads += reader
+                        reader.start()
                         val writer = WriterThread(socket, stateHolder)
                         threads += writer
                         writer.start()
@@ -96,13 +105,12 @@ class TimeTravelServer(
         }
     }
 
-    private class WriterThread(
-        private val socket: Socket,
-        private val stateHolder: StateHolder
+    private abstract class SocketThread(
+        private val socket: Socket
     ) : Thread() {
         override fun run() {
             try {
-                execute()
+                run(socket)
             } catch (e: IOException) {
                 log("Error in WriterThread")
                 e.printStackTrace()
@@ -112,14 +120,49 @@ class TimeTravelServer(
             }
         }
 
+        @Throws(IOException::class)
+        protected abstract fun run(socket: Socket)
+
         override fun interrupt() {
             socket.closeSafe()
 
             super.interrupt()
         }
+    }
 
-        @Throws(IOException::class)
-        private fun execute() {
+    private class ReaderThread(
+        socket: Socket,
+        private val controller: TimeTravelController
+    ) : SocketThread(socket) {
+        override fun run(socket: Socket) {
+            val input = ObjectInputStream(socket.getInputStream().buffered())
+            val handler = Handler()
+
+            while (!isInterrupted) {
+                val command = input.readObject() as TimeTravelCommand
+                handler.post { process(command) }
+            }
+        }
+
+        private fun process(command: TimeTravelCommand) {
+            when (command) {
+                is TimeTravelCommand.StartRecording -> controller.startRecording()
+                is TimeTravelCommand.StopRecording -> controller.stopRecording()
+                is TimeTravelCommand.MoveToStart -> controller.moveToStart()
+                is TimeTravelCommand.StepBackward -> controller.stepBackward()
+                is TimeTravelCommand.StepForward -> controller.stepForward()
+                is TimeTravelCommand.MoveToEnd -> controller.moveToEnd()
+                is TimeTravelCommand.Cancel -> controller.cancel()
+                is TimeTravelCommand.DebugEvent -> controller.debugEvent(eventId = command.eventId)
+            }
+        }
+    }
+
+    private class WriterThread(
+        socket: Socket,
+        private val stateHolder: StateHolder
+    ) : SocketThread(socket) {
+        override fun run(socket: Socket) {
             val output = ObjectOutputStream(socket.getOutputStream().buffered())
             var previousState: TimeTravelState? = null
 
