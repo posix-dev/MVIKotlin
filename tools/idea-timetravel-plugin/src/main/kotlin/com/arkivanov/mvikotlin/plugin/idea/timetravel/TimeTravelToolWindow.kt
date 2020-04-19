@@ -13,33 +13,16 @@ import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import java.awt.BorderLayout
-import java.awt.Color
-import java.awt.GridBagConstraints
-import java.awt.GridBagLayout
 import java.io.BufferedReader
 import java.io.ObjectInputStream
 import java.net.Socket
 import javax.swing.DefaultListModel
 import javax.swing.JComponent
 import javax.swing.JPanel
-import javax.swing.border.CompoundBorder
-import javax.swing.border.EmptyBorder
-import javax.swing.border.MatteBorder
 
 class TimeTravelToolWindow {
 
-    private val eventConstraints =
-        GridBagConstraints().apply {
-            fill = GridBagConstraints.HORIZONTAL
-            weightx = 1.0
-            gridx = 0
-        }
-
-    private val eventsPanel =
-        JPanel(GridBagLayout()).apply {
-            border = CompoundBorder(MatteBorder(0, 0, 1, 0, Color.GRAY), EmptyBorder(8, 8, 8, 8))
-            background = null
-        }
+    private val listModel = DefaultListModel<String>()
 
     private val content =
         JPanel(BorderLayout()).apply {
@@ -47,7 +30,9 @@ class TimeTravelToolWindow {
             val toolBar = actionManager.createActionToolbar(ActionPlaces.COMMANDER_TOOLBAR, createToolbarActions(actionManager), true)
             add(toolBar.component, BorderLayout.NORTH)
 
-            add(JBScrollPane(eventsPanel), BorderLayout.CENTER)
+            val list = JBList(listModel)
+//            list.cellRenderer = ItemRenderer()
+            add(JBScrollPane(list), BorderLayout.CENTER)
         }
 
     private fun createToolbarActions(actionManager: ActionManager): DefaultActionGroup {
@@ -63,23 +48,22 @@ class TimeTravelToolWindow {
     }
 
     init {
-        eventsPanel.add(eventComponent(
+        listModel.addElement(
             TimeTravelEvent(
                 id = 1,
                 storeName = "MyStore",
                 type = StoreEventType.INTENT,
                 value = Value.Object.String("Some value")
             )
-        ), eventConstraints)
-
-        eventsPanel.add(eventComponent(
+        )
+        listModel.addElement(
             TimeTravelEvent(
                 id = 2,
                 storeName = "MyStore",
                 type = StoreEventType.INTENT,
                 value = Value.Object.String("Some value")
             )
-        ), eventConstraints)
+        )
     }
 
     private fun onStateUpdate(update: TimeTravelStateUpdate) {
@@ -89,7 +73,7 @@ class TimeTravelToolWindow {
     private fun onEventsUpdate(eventsUpdate: TimeTravelEventsUpdate) {
         when (eventsUpdate) {
             is TimeTravelEventsUpdate.All -> {
-                eventsPanel.removeAll()
+                listModel.clear()
                 addEvents(eventsUpdate.events)
             }
 
@@ -98,9 +82,7 @@ class TimeTravelToolWindow {
     }
 
     private fun addEvents(events: Iterable<TimeTravelEvent>) {
-        events.forEach {
-            eventsPanel.add(eventComponent(it), eventConstraints)
-        }
+        events.forEach(listModel::addElement)
     }
 
     fun getContent(): JComponent = content

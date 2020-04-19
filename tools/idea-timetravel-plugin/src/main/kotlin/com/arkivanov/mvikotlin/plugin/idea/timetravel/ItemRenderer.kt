@@ -9,7 +9,6 @@ import java.awt.Component
 import java.awt.Font
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
-import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JList
 import javax.swing.JPanel
@@ -41,7 +40,7 @@ class ItemRenderer : ColoredListCellRenderer<TimeTravelEvent>() {
         cellHadsFocus: Boolean
     ): Component =
         JPanel(GridBagLayout()).apply {
-            border = CompoundBorder(MatteBorder(0, 0, 1, 0, Color.GRAY), EmptyBorder(8, 8, 8, 8))
+            border = CompoundBorder(MatteBorder(0, 0, 1, 0, Color.GRAY), EmptyBorder(4, 4, 4, 4))
             background = null
 
             val constraints = GridBagConstraints()
@@ -56,45 +55,9 @@ class ItemRenderer : ColoredListCellRenderer<TimeTravelEvent>() {
                 constraints
             )
 
-            add(
-                JLabel("${event.value.type} (${event.type})").apply {
-                    font = font.deriveFont(Font.BOLD)
-                },
-                constraints
-            )
-
-//            add(JLabel(event.value.toString()))
-            add(tree(), constraints)
+            add(JLabel("${event.value.type} (${event.type})"), constraints)
         }
 }
-
-fun eventComponent(event: TimeTravelEvent): JComponent =
-    JPanel(GridBagLayout()).apply {
-        border = MatteBorder(0, 0, 1, 0, Color.GRAY)
-        background = null
-
-        val constraints = GridBagConstraints()
-        constraints.fill = GridBagConstraints.HORIZONTAL
-        constraints.weightx = 1.0
-        constraints.gridx = 0
-
-        add(
-            JLabel(event.storeName).apply {
-                font = font.deriveFont(Font.BOLD)
-            },
-            constraints
-        )
-
-        add(
-            JLabel("${event.value.type} (${event.type})").apply {
-                font = font.deriveFont(Font.BOLD)
-            },
-            constraints
-        )
-
-//            add(JLabel(event.value.toString()))
-        add(tree(), constraints)
-    }
 
 fun tree(): Tree {
     val top = DefaultMutableTreeNode("Top node")
