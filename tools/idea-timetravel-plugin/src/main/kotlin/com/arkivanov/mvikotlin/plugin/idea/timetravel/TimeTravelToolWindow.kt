@@ -16,9 +16,12 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
+import org.jdesktop.swingx.renderer.CellContext
+import org.jdesktop.swingx.renderer.ComponentProvider
 import org.jdesktop.swingx.renderer.DefaultListRenderer
+import org.jdesktop.swingx.renderer.JRendererLabel
 import java.awt.BorderLayout
-import java.awt.event.MouseEvent
+import java.awt.Font
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.ObjectInputStream
@@ -26,6 +29,7 @@ import java.io.ObjectOutputStream
 import java.net.Socket
 import java.util.concurrent.LinkedBlockingQueue
 import javax.swing.DefaultListModel
+import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JTree
 import javax.swing.tree.DefaultMutableTreeNode
@@ -41,8 +45,22 @@ class TimeTravelToolWindow(
 
     private val list =
         JBList(listModel).apply {
-            cellRenderer = DefaultListRenderer { (it as TimeTravelEvent).description }
-            addMouseListener(mouseListener(::onListItemClick))
+            cellRenderer = DefaultListRenderer(
+                object : ComponentProvider<JLabel>() {
+                    override fun createRendererComponent(): JLabel = JRendererLabel()
+
+                    override fun configureState(cellContext: CellContext) {
+                        (rendererComponent as JLabel).horizontalAlignment = horizontalAlignment
+                    }
+
+                    override fun format(cellContext: CellContext) {
+                        val label = rendererComponent as JLabel
+                        val event = cellContext.value as TimeTravelEvent
+                        label.text = event.description
+                        label.font = font.deriveFont(if (state?.selectedEventIndex == cellContext.row) Font.BOLD else Font.PLAIN)
+                    }
+                }
+            )
             addListSelectionListener { onSelectionChanged() }
         }
 
@@ -55,7 +73,7 @@ class TimeTravelToolWindow(
             add(toolbar.component, BorderLayout.NORTH)
 
             add(
-                JBSplitter(false).apply {
+                JBSplitter(false, 0.4F).apply {
                     firstComponent = JBScrollPane(list)
                     secondComponent = JBScrollPane(tree)
                 },
@@ -68,12 +86,8 @@ class TimeTravelToolWindow(
     private var writer: WriterThread? = null
     private val isConnected: Boolean get() = (reader != null) && (writer != null)
 
-    private fun onListItemClick(ev: MouseEvent) {
-        if (ev.clickCount == 2) {
-            if (list.getCellBounds(0, list.lastVisibleIndex)?.contains(ev.point) == true) {
-                list.selectedValue?.also(eventDetailsScreen::show)
-            }
-        }
+    init {
+        onSelectionChanged()
     }
 
     private fun onSelectionChanged() {
@@ -224,6 +238,10 @@ class TimeTravelToolWindow(
         reader = null
         writer?.interrupt()
         writer = null
+
+        state = null
+        listModel.clear()
+        updateTree()
     }
 
     private fun debug() {
@@ -246,6 +264,7 @@ class TimeTravelToolWindow(
     private fun onStateUpdate(update: TimeTravelStateUpdate) {
         state = State(selectedEventIndex = update.selectedEventIndex, mode = update.mode)
         onEventsUpdate(update.eventsUpdate)
+        list.updateUI()
     }
 
     private fun onEventsUpdate(eventsUpdate: TimeTravelEventsUpdate) {
@@ -320,7 +339,6 @@ class TimeTravelToolWindow(
     private fun updateTree() {
         rootTreeNode.removeAllChildren()
         val selectedEvent: TimeTravelEvent? = list.selectedValue
-
 
         selectedEvent?.value?.also {
             rootTreeNode.userObject = it.getNodeText()
