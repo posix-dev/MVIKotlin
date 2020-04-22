@@ -1,4 +1,4 @@
-package com.arkivanov.mvikotlin.timetravel.proto
+package com.arkivanov.mvikotlin.utils.internal
 
 import java.lang.reflect.Field
 import java.lang.reflect.TypeVariable

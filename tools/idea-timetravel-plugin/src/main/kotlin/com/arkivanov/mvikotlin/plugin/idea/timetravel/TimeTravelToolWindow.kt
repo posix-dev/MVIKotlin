@@ -5,9 +5,9 @@ import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelCommand
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEvent
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEventsUpdate
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelStateUpdate
-import com.arkivanov.mvikotlin.timetravel.proto.Value
-import com.arkivanov.mvikotlin.timetravel.proto.closeSafe
-import com.arkivanov.mvikotlin.timetravel.proto.type
+import com.arkivanov.mvikotlin.utils.internal.Value
+import com.arkivanov.mvikotlin.utils.internal.closeSafe
+import com.arkivanov.mvikotlin.utils.internal.type
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces

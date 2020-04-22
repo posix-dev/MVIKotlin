@@ -7,12 +7,11 @@ import com.arkivanov.mvikotlin.timetravel.TimeTravelEvent
 import com.arkivanov.mvikotlin.timetravel.TimeTravelState
 import com.arkivanov.mvikotlin.timetravel.controller.TimeTravelController
 import com.arkivanov.mvikotlin.timetravel.controller.timeTravelController
-import com.arkivanov.mvikotlin.timetravel.proto.CloseableHolder
 import com.arkivanov.mvikotlin.timetravel.proto.DEFAULT_PORT
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelCommand
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEventsUpdate
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelStateUpdate
-import com.arkivanov.mvikotlin.timetravel.proto.closeSafe
+import com.arkivanov.mvikotlin.utils.internal.closeSafe
 import java.io.IOException
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream

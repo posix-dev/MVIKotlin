@@ -1,9 +1,10 @@
-package com.arkivanov.mvikotlin.timetravel.proto
+package com.arkivanov.mvikotlin.timetravel.server
 
+import com.arkivanov.mvikotlin.utils.internal.closeSafe
 import java.io.Closeable
 import java.lang.Object
 
-class CloseableHolder : Closeable {
+internal class CloseableHolder : Closeable {
 
     private val monitor = Object()
     private var isClosed = false

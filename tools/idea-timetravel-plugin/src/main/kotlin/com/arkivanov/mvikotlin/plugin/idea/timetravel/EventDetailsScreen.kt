@@ -1,7 +1,7 @@
 package com.arkivanov.mvikotlin.plugin.idea.timetravel
 
 import com.arkivanov.mvikotlin.timetravel.proto.TimeTravelEvent
-import com.arkivanov.mvikotlin.timetravel.proto.Value
+import com.arkivanov.mvikotlin.utils.internal.Value
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
 import java.awt.Dimension

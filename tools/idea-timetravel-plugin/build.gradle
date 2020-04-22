@@ -13,6 +13,7 @@ repositories {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation project(":mvikotlin-timetravel-proto")
+    implementation project(":utils-internal")
 }
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/

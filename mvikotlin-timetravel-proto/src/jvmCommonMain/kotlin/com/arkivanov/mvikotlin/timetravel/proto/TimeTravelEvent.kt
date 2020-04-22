@@ -1,5 +1,6 @@
 package com.arkivanov.mvikotlin.timetravel.proto
 
+import com.arkivanov.mvikotlin.utils.internal.Value
 import java.io.Serializable
 
 data class TimeTravelEvent(

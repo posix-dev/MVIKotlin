@@ -11,6 +11,7 @@ kotlin {
                 implementation(project(":mvikotlin"))
                 implementation(project(":mvikotlin-timetravel"))
                 implementation(project(":mvikotlin-timetravel-proto"))
+                implementation(project(":utils-internal"))
             }
         }
     }
