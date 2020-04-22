@@ -8,7 +8,6 @@ import com.arkivanov.mvikotlin.core.store.StoreFactory
 import com.arkivanov.mvikotlin.core.test.internal.TestBootstrapper
 import com.arkivanov.mvikotlin.core.test.internal.TestExecutor
 import com.arkivanov.mvikotlin.core.test.internal.reducer
-import com.arkivanov.mvikotlin.logging.LoggingMode
 import com.arkivanov.mvikotlin.logging.logger.Logger
 import com.arkivanov.mvikotlin.rx.Disposable
 import com.arkivanov.mvikotlin.rx.Observer
@@ -135,8 +134,7 @@ class LoggingStoreFactoryTest {
 
         val factory = LoggingStoreFactory(
             delegate = delegate,
-            logger = logger,
-            mode = LoggingMode.MEDIUM
+            logger = logger
         )
 
         return factory.create(
